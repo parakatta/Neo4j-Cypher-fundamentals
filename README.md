@@ -74,3 +74,77 @@ PROFILE MATCH (p:Actor)-[:ACTED_IN]-()
 WHERE p.born < '1950'
 RETURN p.name
 ```
+
+Lets create the database and add labels and relationships with properties
+```
+MERGE (:Movie {title: 'Apollo 13', tmdbId: 568, released: '1995-06-30', imdbRating: 7.6, genres: ['Drama', 'Adventure', 'IMAX']})
+MERGE (:Person {name: 'Tom Hanks', tmdbId: 31, born: '1956-07-09'})
+MERGE (:Person {name: 'Meg Ryan', tmdbId: 5344, born: '1961-11-19'})
+MERGE (:Person {name: 'Danny DeVito', tmdbId: 518, born: '1944-11-17'})
+MERGE (:Movie {title: 'Sleepless in Seattle', tmdbId: 858, released: '1993-06-25', imdbRating: 6.8, genres: ['Comedy', 'Drama', 'Romance']})
+MERGE (:Movie {title: 'Hoffa', tmdbId: 10410, released: '1992-12-25', imdbRating: 6.6, genres: ['Crime', 'Drama']})
+MERGE (:Person {name: 'Jack Nicholson', tmdbId: 514, born: '1937-04-22'})
+MERGE (:User {name: 'Sandy Jones', userId: 534})
+MERGE (:User {name: 'Clinton Spencer', userId: 105})
+```
+
+```
+MATCH (apollo:Movie {title: 'Apollo 13'})
+MATCH (tom:Person {name: 'Tom Hanks'})
+MATCH (meg:Person {name: 'Meg Ryan'})
+MATCH (danny:Person {name: 'Danny DeVito'})
+MATCH (sleep:Movie {title: 'Sleepless in Seattle'})
+MATCH (hoffa:Movie {title: 'Hoffa'})
+MATCH (jack:Person {name: 'Jack Nicholson'})
+
+// create the relationships between nodes
+MERGE (tom)-[:ACTED_IN {role: 'Jim Lovell'}]->(apollo)
+MERGE (tom)-[:ACTED_IN {role: 'Sam Baldwin'}]->(sleep)
+MERGE (meg)-[:ACTED_IN {role: 'Annie Reed'}]->(sleep)
+MERGE (danny)-[:ACTED_IN {role: 'Bobby Ciaro'}]->(hoffa)
+MERGE (danny)-[:DIRECTED]->(hoffa)
+MERGE (jack)-[:ACTED_IN {role: 'Jimmy Hoffa'}]->(hoffa)
+```
+What is the highest rated movies in year 1995 according to the imdbrating?
+```
+MATCH (m:Movie)
+WHERE m.released STARTS WITH '1995'
+RETURN m.title, m.imbdrating ORDER BY
+m.imdbrating DESC LIMIT 1
+```
+
+Use a WITH clause to limit and order nodes.
+
+eg : What is the highest revenue movie for Tom Hanks?
+
+```
+WITH  'Tom Hanks' AS theActor
+MATCH (p:Person)-[:ACTED_IN]->(m:Movie)
+WHERE p.name = theActor
+AND m.revenue IS NOT NULL
+WITH m ORDER BY m.revenue DESC LIMIT 1
+RETURN m.revenue AS revenue, m.title AS title
+```
+What is the highest revenue for a movie for Tom Hanks?
+```
+WITH  'Tom Hanks' AS theActor
+MATCH (p:Person)-[:ACTED_IN]->(m:Movie)
+WHERE p.name = theActor
+AND m.revenue IS NOT NULL
+WITH m ORDER BY m.revenue DESC LIMIT 1
+RETURN m.revenue AS revenue, m.title AS title
+```
+What actor acted in more than one of these top four movies
+```
+MATCH (n:Movie)
+WHERE n.imdbRating IS NOT NULL AND n.poster IS NOT NULL
+WITH n {
+  .title,
+  .imdbRating,
+  actors: [ (n)<-[:ACTED_IN]-(p) | p { tmdbId:p.imdbId, .name } ],
+  genres: [ (n)-[:IN_GENRE]->(g) | g {.name}]
+}
+ORDER BY n.imdbRating DESC
+LIMIT 4
+RETURN collect(n)
+```
